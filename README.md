@@ -26,19 +26,18 @@ Tori Me (pidgin for "tell me") is a straightforward news reader that helps users
 - HAProxy for load balancing
 
 ## Prerequisites
-
 - Modern web browser (Chrome, Firefox, Safari, or Edge)
-- GNews API key (available at https://gnews.io/)
+- NewsAPI.ai API key (available at https://eventregistry.org/)
 - Text editor for configuration
 - SSH access to deployment servers (for production deployment)
-
 ## Local Setup
 
 ### Step 1: Get Your API Key
 
-1. Visit https://gnews.io/ and create a free account
+1. Visit https://eventregistry.org/ and create a free account
 2. Navigate to your dashboard and copy your API key
-3. The free tier provides 100 requests per day
+3. The free tier provides 2,000 tokens (queries) in total
+
 
 ### Step 2: Clone the Repository
 
@@ -166,7 +165,7 @@ Repeat the same process on the second server:
 ssh ubuntu@54.174.119.2
 
 sudo mkdir -p /var/www/torime
-cd /var/www
+cd /var/www/torime
 sudo git clone https://github.com/NkemJefersonAchia/News-Aggregator.git torime
 sudo chown -R ubuntu:ubuntu torime
 
@@ -307,27 +306,36 @@ Design inspiration drawn from classic web design principles found on W3Schools a
 
 ## API Usage
 
-### GNews API Endpoints
+### NewsAPI.ai (Event Registry) API
 
-Top Headlines (default view):
-```
-https://gnews.io/api/v4/top-headlines?lang=en&apikey={API_KEY}
-```
+The application uses the Event Registry API which provides access to news articles from various sources worldwide.
 
-Category filtering:
+API Endpoint:
 ```
-https://gnews.io/api/v4/top-headlines?lang=en&topic={category}&apikey={API_KEY}
+POST https://eventregistry.org/api/v1/article/getArticles
 ```
 
-Custom search:
-```
-https://gnews.io/api/v4/search?q={query}&lang=en&apikey={API_KEY}
+Request body example:
+```json
+{
+  "apiKey": "YOUR_API_KEY",
+  "resultType": "articles",
+  "articlesSortBy": "date",
+  "articlesCount": 20,
+  "articleBodyLen": -1,
+  "lang": "eng",
+  "keyword": "technology"
+}
 ```
 
-### API Rate Limits
+### API Rate Limits and Token Usage
 
-- Free tier: 100 requests per day
-- Pro tier: 50,000 requests per month
+- Free tier: 2,000 tokens total
+- Maximum simultaneous requests: 5
+- Rate limiting: 503 status code if limit exceeded
+- Recommended: Sequential requests instead of parallel
+
+Each query consumes tokens based on the complexity of the request. Monitor your token usage in your Event Registry dashboard.
 
 ## Browser Compatibility
 
@@ -374,8 +382,8 @@ sudo systemctl status haproxy
 
 ## Challenges and Solutions
 
-### Challenge 1: API Rate Limiting
-The free tier of GNews API provides only 100 requests per day. To work within this constraint, the application focuses on efficient API calls and provides clear feedback when limits are reached.
+### Challenge 1: API Rate Limiting and CORS Issues
+The initial implementation used GNews API which had CORS restrictions preventing direct browser requests. Switched to NewsAPI.ai (Event Registry) which provides proper CORS support and uses a POST-based API that works seamlessly in browser environments.
 
 ### Challenge 2: Cross-Origin Image Loading
 Some news sources block cross-origin image requests. The solution implemented gracefully handles image loading errors by hiding broken images rather than showing placeholder icons.
@@ -391,7 +399,7 @@ Creating a layout that works well on both desktop and mobile required careful us
 
 ## Credits
 
-- GNews API: https://gnews.io/
+- NewsAPI.ai (Event Registry): https://eventregistry.org/
 - Design inspiration: W3Schools web design principles
 - Development: Nkem Jeferson Achia
 
@@ -416,7 +424,7 @@ GitHub: https://github.com/NkemJefersonAchia
 
 For issues or questions about the application, please check:
 1. The troubleshooting section in this README
-2. GNews API documentation at https://gnews.io/docs/v4
+2. NewsAPI.ai documentation at https://eventregistry.org/documentation
 3. Browser console for error messages
 
 ---

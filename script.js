@@ -1,26 +1,17 @@
-// Replace with your actual GNews API key
-const API_KEY = "bc2fd17457498339fca2e8374cc0baf9";
-
-const API_ENDPOINTS = {
-    headlines: "https://gnews.io/api/v4/top-headlines",
-    search: "https://gnews.io/api/v4/search"
-};
+// Replace with your actual EventRegistry API key
+const API_KEY = "366f7a61-50ee-4731-853e-2d74e7bd1aba";
+const API_ENDPOINT = "https://eventregistry.org/api/v1/article/getArticles";
 
 // App state
 let currentArticles = [];
 let bookmarkedArticles = [];
 
-// Initialize app when page loads
+// Initialize app
 document.addEventListener('DOMContentLoaded', function() {
     loadSavedArticles();
     setupEventListeners();
     updateBookmarkCounter();
-    
-    if (API_KEY === "YOUR_API_KEY_HERE") {
-        showError("Please add your GNews API key in script.js");
-    } else {
-        fetchNews();
-    }
+    fetchNews();
 });
 
 function setupEventListeners() {
@@ -28,34 +19,21 @@ function setupEventListeners() {
     document.getElementById('btn-feed').addEventListener('click', () => showView('feed'));
     document.getElementById('btn-saved').addEventListener('click', () => showView('saved'));
     document.getElementById('clearBtn').addEventListener('click', clearAllSaved);
-    
+
     document.getElementById('searchInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            fetchNews();
-        }
+        if (e.key === 'Enter') fetchNews();
     });
-    
+
     document.getElementById('categorySelect').addEventListener('change', fetchNews);
 }
 
 function loadSavedArticles() {
-    try {
-        const saved = localStorage.getItem('torime_saved');
-        if (saved) {
-            bookmarkedArticles = JSON.parse(saved);
-        }
-    } catch (error) {
-        console.log('Could not load saved articles:', error);
-        bookmarkedArticles = [];
-    }
+    const saved = localStorage.getItem('torime_saved');
+    bookmarkedArticles = saved ? JSON.parse(saved) : [];
 }
 
 function saveToBrowser() {
-    try {
-        localStorage.setItem('torime_saved', JSON.stringify(bookmarkedArticles));
-    } catch (error) {
-        console.log('Could not save articles:', error);
-    }
+    localStorage.setItem('torime_saved', JSON.stringify(bookmarkedArticles));
 }
 
 async function fetchNews() {
@@ -64,118 +42,115 @@ async function fetchNews() {
     const feedContainer = document.getElementById('newsFeed');
     const fetchButton = document.getElementById('fetchBtn');
     const errorBox = document.getElementById('errorContainer');
-    
+
     errorBox.classList.remove('show');
     feedContainer.classList.add('loading');
-    fetchButton.innerHTML = '<span class="loader"></span>';
-    
+    fetchButton.textContent = 'Loading...';
+
     try {
-        const apiUrl = buildRequestUrl(searchTerm, category);
-        const response = await fetch(apiUrl);
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.errors || 'Failed to load news. Check your API key.');
+        const requestBody = {
+            action: "getArticles",
+            apiKey: API_KEY,
+            lang: "eng",
+            articlesSortBy: "date",
+            articlesCount: 20
+        };
+
+        if (searchTerm && searchTerm.toLowerCase() !== "general") {
+            requestBody.keyword = searchTerm;
         }
-        
-        currentArticles = data.articles || [];
+
+        if (category) {
+            requestBody.categoryUri = category;
+        }
+
+        const response = await fetch(API_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody)
+        });
+
+        const data = await response.json();
+
+        if (!data.articles || !data.articles.results || data.articles.results.length === 0) {
+            currentArticles = [];
+            displayArticles([], 'newsFeed');
+            return;
+        }
+
+       currentArticles = data.articles.results.map(a => ({
+    title: a.title,
+    description: a.body || a.summary || '',
+    url: a.url,
+    image: a.image || '',
+    source: typeof a.source === 'string' ? a.source : (a.source?.title || a.source?.name || 'Unknown'),
+    publishedAt: a.date || ''
+}));
+
         displayArticles(currentArticles, 'newsFeed');
-        
-    } catch (error) {
-        console.error('Error fetching news:', error);
-        showError(error.message);
+
+    } catch (err) {
+        console.error(err);
+        errorBox.textContent = "Failed to fetch news. Check your API key or network.";
+        errorBox.classList.add('show');
     } finally {
         feedContainer.classList.remove('loading');
         fetchButton.textContent = 'Find Stories';
     }
 }
 
-function buildRequestUrl(searchTerm, category) {
-    let url = `${API_ENDPOINTS.headlines}?lang=en&apikey=${API_KEY}`;
-    
-    if (searchTerm && searchTerm.toLowerCase() !== 'general') {
-        url = `${API_ENDPOINTS.search}?q=${encodeURIComponent(searchTerm)}&lang=en&apikey=${API_KEY}`;
-    } else if (category) {
-        url += `&topic=${category}`;
-    }
-    
-    return url;
-}
-
-function showError(message) {
-    const errorBox = document.getElementById('errorContainer');
-    errorBox.textContent = message;
-    errorBox.classList.add('show');
+// Truncate text for preview
+function truncateText(text, maxLength = 200) {
+    if (!text) return '';
+    return text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
 }
 
 function displayArticles(articles, containerId) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
-    
-    if (!articles || articles.length === 0) {
+
+    if (!articles.length) {
         container.innerHTML = '<div class="empty-state"><p>No stories found. Try a different search.</p></div>';
         return;
     }
-    
+
     articles.forEach(article => {
-        const articleElement = createArticleElement(article);
-        container.appendChild(articleElement);
+        const el = createArticleElement(article);
+        container.appendChild(el);
     });
 }
 
 function createArticleElement(article) {
-    const articleDiv = document.createElement('div');
-    articleDiv.className = 'article-card';
-    
-    const isBookmarked = bookmarkedArticles.some(saved => saved.url === article.url);
-    const publishDate = formatDate(article.publishedAt);
-    
-    articleDiv.innerHTML = `
-        <div class="article-layout">
-            ${article.image ? `
-                <div class="article-image">
-                    <img src="${article.image}" alt="${escapeText(article.title)}">
-                </div>
-            ` : ''}
-            
-            <div class="article-content">
-                <div class="article-meta">
-                    <span class="source-tag">${escapeText(article.source.name)}</span>
-                    <span class="article-date">${publishDate}</span>
-                </div>
-                
-                <h3 class="article-title">
-                    <a href="${article.url}" target="_blank" rel="noopener noreferrer">
-                        ${escapeText(article.title)}
-                    </a>
-                </h3>
-                
-                <p class="article-description">
-                    ${escapeText(article.description || 'No description available')}
-                </p>
-                
-                <div class="article-actions">
-                    <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="read-link">
-                        Read Full Story →
-                    </a>
-                    <button class="save-btn ${isBookmarked ? 'saved' : ''}" data-url="${article.url}">
-                        ${isBookmarked ? 'Saved ✓' : 'Save +'}
-                    </button>
-                </div>
+    const div = document.createElement('div');
+    div.className = 'article-card';
+
+    const isBookmarked = bookmarkedArticles.some(a => a.url === article.url);
+    const date = article.publishedAt ? new Date(article.publishedAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric'}) : '';
+    const sourceName = typeof article.source === 'string' ? article.source : 'Unknown';
+
+    div.innerHTML = `
+        ${article.image ? `<div class="article-image"><img src="${article.image}" alt="${escapeText(article.title)}"></div>` : ''}
+        <div class="article-content">
+            <div class="article-meta">
+                <span class="source-tag">${escapeText(sourceName)}</span>
+                <span class="article-date">${date}</span>
+            </div>
+            <h3 class="article-title">
+                <a href="${article.url}" target="_blank" rel="noopener noreferrer">${escapeText(article.title)}</a>
+            </h3>
+            <p class="article-description">${escapeText(truncateText(article.description, 200))}</p>
+            <div class="article-actions">
+                <a href="${article.url}" target="_blank" class="read-link">Read Full Story →</a>
+                <button class="save-btn ${isBookmarked ? 'saved' : ''}" data-url="${article.url}">
+                    ${isBookmarked ? 'Saved ✓' : 'Save +'}
+                </button>
             </div>
         </div>
     `;
-    
-    const saveButton = articleDiv.querySelector('.save-btn');
-    saveButton.addEventListener('click', () => toggleBookmark(article.url));
-    
-    return articleDiv;
-}
 
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return date.toLocaleDateString('en-US', options);
+    div.querySelector('.save-btn').addEventListener('click', () => toggleBookmark(article.url));
+
+    return div;
 }
 
 function escapeText(text) {
@@ -184,39 +159,29 @@ function escapeText(text) {
     return div.innerHTML;
 }
 
-function toggleBookmark(articleUrl) {
-    const index = bookmarkedArticles.findIndex(article => article.url === articleUrl);
-    
-    if (index > -1) {
-        bookmarkedArticles.splice(index, 1);
-    } else {
-        const article = currentArticles.find(a => a.url === articleUrl);
-        if (article) {
-            bookmarkedArticles.push(article);
-        }
+function toggleBookmark(url) {
+    const index = bookmarkedArticles.findIndex(a => a.url === url);
+    if (index > -1) bookmarkedArticles.splice(index,1);
+    else {
+        const article = currentArticles.find(a => a.url === url);
+        if (article) bookmarkedArticles.push(article);
     }
-    
     saveToBrowser();
     updateBookmarkCounter();
-    
-    const currentView = document.getElementById('view-saved').classList.contains('hidden') ? 'feed' : 'saved';
-    
-    if (currentView === 'saved') {
-        displayArticles(bookmarkedArticles, 'savedFeed');
-        toggleEmptyState();
-    } else {
-        displayArticles(currentArticles, 'newsFeed');
-    }
+
+    const viewSavedVisible = !document.getElementById('view-saved').classList.contains('hidden');
+    if (viewSavedVisible) displayArticles(bookmarkedArticles, 'savedFeed');
+    else displayArticles(currentArticles, 'newsFeed');
+    toggleEmptyState();
 }
 
 function clearAllSaved() {
-    if (confirm('Remove all saved stories? This cannot be undone.')) {
-        bookmarkedArticles = [];
-        saveToBrowser();
-        updateBookmarkCounter();
-        displayArticles([], 'savedFeed');
-        toggleEmptyState();
-    }
+    if (!confirm('Remove all saved stories?')) return;
+    bookmarkedArticles = [];
+    saveToBrowser();
+    updateBookmarkCounter();
+    displayArticles([], 'savedFeed');
+    toggleEmptyState();
 }
 
 function updateBookmarkCounter() {
@@ -224,32 +189,28 @@ function updateBookmarkCounter() {
 }
 
 function showView(viewName) {
-    const feedView = document.getElementById('view-feed');
-    const savedView = document.getElementById('view-saved');
-    const feedButton = document.getElementById('btn-feed');
-    const savedButton = document.getElementById('btn-saved');
-    
+    const feed = document.getElementById('view-feed');
+    const saved = document.getElementById('view-saved');
+    const btnFeed = document.getElementById('btn-feed');
+    const btnSaved = document.getElementById('btn-saved');
+
     if (viewName === 'feed') {
-        feedView.classList.remove('hidden');
-        savedView.classList.add('hidden');
-        feedButton.classList.add('active');
-        savedButton.classList.remove('active');
+        feed.classList.remove('hidden');
+        saved.classList.add('hidden');
+        btnFeed.classList.add('active');
+        btnSaved.classList.remove('active');
     } else {
-        feedView.classList.add('hidden');
-        savedView.classList.remove('hidden');
-        feedButton.classList.remove('active');
-        savedButton.classList.add('active');
-        
+        feed.classList.add('hidden');
+        saved.classList.remove('hidden');
+        btnFeed.classList.remove('active');
+        btnSaved.classList.add('active');
         displayArticles(bookmarkedArticles, 'savedFeed');
         toggleEmptyState();
     }
 }
 
 function toggleEmptyState() {
-    const emptyMessage = document.getElementById('emptySaved');
-    if (bookmarkedArticles.length === 0) {
-        emptyMessage.classList.remove('hidden');
-    } else {
-        emptyMessage.classList.add('hidden');
-    }
+    const empty = document.getElementById('emptySaved');
+    if (bookmarkedArticles.length === 0) empty.classList.remove('hidden');
+    else empty.classList.add('hidden');
 }
