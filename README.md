@@ -105,6 +105,23 @@ cd /var/www
 sudo git clone https://github.com/NkemJefersonAchia/News-Aggregator.git torime
 sudo chown -R ubuntu:ubuntu torime
 
+### Configure Your API Key
+
+cd News-Aggregator
+Open `script.js` and locate line 1:
+sudo nano script.js
+
+```javascript
+const API_KEY = "YOUR_API_KEY_HERE";
+```
+
+Replace the placeholder with your actual GNews API key:
+
+```javascript
+const API_KEY = "abc123def456ghi789";
+```
+
+
 # Configure Nginx
 sudo nano /etc/nginx/sites-available/default
 ```
@@ -153,6 +170,21 @@ sudo mkdir -p /var/www/torime
 cd /var/www
 sudo git clone https://github.com/NkemJefersonAchia/News-Aggregator.git torime
 sudo chown -R ubuntu:ubuntu torime
+
+### Configure Your API Key
+
+cd News-Aggregator
+
+Open `script.js` and locate line 1:
+sudo nano script.js
+```javascript
+const API_KEY = "YOUR_API_KEY_HERE";
+```
+Replace the placeholder with your actual GNews API key:
+
+```javascript
+const API_KEY = "abc123def456ghi789";
+```
 
 sudo nano /etc/nginx/sites-available/default
 # Paste the same Nginx configuration
