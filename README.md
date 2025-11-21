@@ -126,7 +126,7 @@ sudo nano /etc/nginx/sites-available/default
 
 Add the following Nginx configuration:
 
-```nginx
+```
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
