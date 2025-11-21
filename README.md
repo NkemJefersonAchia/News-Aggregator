@@ -123,7 +123,6 @@ const API_KEY = "abc123def456ghi789";
 # Configure Nginx
 sudo nano /etc/nginx/sites-available/default
 ```
-
 Add the following Nginx configuration:
 
 ```
@@ -132,7 +131,7 @@ server {
     listen [::]:80 default_server;
 
     server_name _;
-    
+
     add_header X-Served-By $hostname;
 
     root /var/www/torime;
@@ -147,6 +146,8 @@ server {
         add_header Cache-Control "public, immutable";
     }
 }
+
+
 ```
 
 Test and restart Nginx:
