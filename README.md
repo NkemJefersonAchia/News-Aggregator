@@ -351,7 +351,3 @@ For issues or questions about the application, please check:
 3. Browser console for error messages
 
 ---
-
-Version: 1.0.0
-Last Updated: March 2025
-Status: Production

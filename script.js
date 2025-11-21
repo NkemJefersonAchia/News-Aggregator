@@ -1,5 +1,5 @@
 // Replace with your actual GNews API key
-const API_KEY = "YOUR_API_KEY_HERE";
+const API_KEY = "bc2fd17457498339fca2e8374cc0baf9";
 
 const API_ENDPOINTS = {
     headlines: "https://gnews.io/api/v4/top-headlines",
