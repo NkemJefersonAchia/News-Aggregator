@@ -1,6 +1,6 @@
 # Tori Me - News Aggregator
 
-A clean, minimalist news aggregation platform that brings you the latest headlines from around the world. Built with vanilla JavaScript and powered by the GNews API.
+A clean, minimalist news aggregation platform that brings you the latest headlines from around the world. Built with vanilla JavaScript and powered by the EventRegistry API.
 
 ## Project Overview
 
