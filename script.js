@@ -1,5 +1,5 @@
 // Replace with your actual EventRegistry API key
-const API_KEY = "366f7a61-50ee-4731-853e-2d74e7bd1aba";
+const API_KEY = "YOUR_API_KEY_HERE";
 const API_ENDPOINT = "https://eventregistry.org/api/v1/article/getArticles";
 
 // App state
