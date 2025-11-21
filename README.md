@@ -162,13 +162,6 @@ sudo systemctl restart nginx
 sudo systemctl status nginx --no-pager
 ```
 
-Test and restart Nginx:
-
-```bash
-sudo nginx -t
-sudo systemctl restart nginx
-exit
-```
 
 #### Web-02 Deployment
 
