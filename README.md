@@ -185,8 +185,11 @@ Replace the placeholder with your actual GNews API key:
 const API_KEY = "abc123def456ghi789";
 ```
 
+# Configure Nginx
 sudo nano /etc/nginx/sites-available/default
-### Paste the same Nginx configuration
+### Paste the same Nginx configuration for web-01
+
+Test and restart Nginx:
 
 ```bash
 sudo nginx -t
