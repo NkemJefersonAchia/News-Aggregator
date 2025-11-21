@@ -119,19 +119,24 @@ Replace the placeholder with your actual GNews API key:
 const API_KEY = "abc123def456ghi789";
 ```
 
+## Configure Nginx
 
-# Configure Nginx
+1. Open the default site configuration:
+
+```bash
 sudo nano /etc/nginx/sites-available/default
 ```
-Add the following Nginx configuration:
 
-```
+2. Replace (or add) the server block below.:
+
+```nginx
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
 
     server_name _;
 
+    # Expose which backend served the request
     add_header X-Served-By $hostname;
 
     root /var/www/torime;
@@ -141,14 +146,26 @@ server {
         try_files $uri $uri/ =404;
     }
 
+    # Cache static assets for one day
     location ~* \.(js|css|png|jpg|jpeg|gif|ico)$ {
         expires 1d;
         add_header Cache-Control "public, immutable";
     }
 }
-
-
 ```
+
+3. Test and reload Nginx:
+
+```bash
+sudo nginx -t
+sudo systemctl restart nginx
+sudo systemctl status nginx --no-pager
+```
+
+Notes:
+- Ensure the `root` path matches your deployment directory (/var/www/torime).
+- Set a proper `server_name` for production (e.g., www.nkem.tech) instead of the placeholder `_`.
+- Keep secrets (API keys) out of webroot and version control.
 
 Test and restart Nginx:
 
