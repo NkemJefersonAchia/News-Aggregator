@@ -178,24 +178,58 @@ HAProxy configuration:
 global
     log /dev/log local0
     log /dev/log local1 notice
+    chroot /var/lib/haproxy
+    stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+    stats timeout 30s
+    user haproxy
+    group haproxy
     daemon
+    ca-base /etc/ssl/certs
+    crt-base /etc/ssl/private
+    ssl-default-bind-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA->
+    ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+    ssl-default-bind-options ssl-min-ver TLSv1.2 no-tls-tickets
 
 defaults
-    log     global
-    mode    http
-    option  httplog
-    timeout connect 5000
-    timeout client  50000
-    timeout server  50000
+    log global
+    mode http
+    option httplog
+    option dontlognull
+    timeout connect 5000ms
+    timeout client 50000ms
+    timeout server 50000ms
+    errorfile 400 /etc/haproxy/errors/400.http
+    errorfile 403 /etc/haproxy/errors/403.http
+    errorfile 408 /etc/haproxy/errors/408.http
+    errorfile 500 /etc/haproxy/errors/500.http
+    errorfile 502 /etc/haproxy/errors/502.http
+    errorfile 503 /etc/haproxy/errors/503.http
+    errorfile 504 /etc/haproxy/errors/504.http
 
-frontend http_in
+frontend http-in
     bind *:80
-    default_backend servers
+    mode http
+    http-request redirect scheme https code 301 if !{ ssl_fc }
 
-backend servers
+frontend https-in
+    bind *:443 ssl crt /etc/haproxy/certs/www.nkem.tech.pem
+    mode http
+    option httplog
+    option forwardfor
+    http-request set-header X-Forwarded-Proto https
+    acl host_root hdr(host) -i nkem.tech
+    acl host_www hdr(host) -i www.nkem.tech
+    use_backend web-backend if host_root or host_www
+    default_backend web-backend
+
+backend web-backend
+    mode http
     balance roundrobin
-    server web01 3.86.143.160:80 check
-    server web02 54.174.119.2:80 check
+    option http-server-close
+    option forwardfor
+    server 6855-web-01 3.86.143.160:80 check
+    server 6855-web-02 54.174.119.2:80 check
+
 ```
 
 Test and restart HAProxy:
