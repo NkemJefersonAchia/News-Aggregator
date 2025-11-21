@@ -162,11 +162,6 @@ sudo systemctl restart nginx
 sudo systemctl status nginx --no-pager
 ```
 
-Notes:
-- Ensure the `root` path matches your deployment directory (/var/www/torime).
-- Set a proper `server_name` for production (e.g., www.nkem.tech) instead of the placeholder `_`.
-- Keep secrets (API keys) out of webroot and version control.
-
 Test and restart Nginx:
 
 ```bash
