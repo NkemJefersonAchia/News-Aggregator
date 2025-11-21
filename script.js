@@ -1,300 +1,255 @@
-const API_KEY = "API KEY"; // <--- PASTE YOUR KEY HERE
+// Replace with your actual GNews API key
+const API_KEY = "YOUR_API_KEY_HERE";
 
-// API CONSTANTS
-const BASE_URL = "https://gnews.io/api/v4/top-headlines";
-const SEARCH_URL = "https://gnews.io/api/v4/search";
+const API_ENDPOINTS = {
+    headlines: "https://gnews.io/api/v4/top-headlines",
+    search: "https://gnews.io/api/v4/search"
+};
 
-// APPLICATION STATE
-let articles = [];
-let savedArticles = JSON.parse(localStorage.getItem('newswire_saved')) || [];
+// App state
+let currentArticles = [];
+let bookmarkedArticles = [];
 
-
-document.addEventListener('DOMContentLoaded', () => {
-    initializeApp();
+// Initialize app when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadSavedArticles();
+    setupEventListeners();
+    updateBookmarkCounter();
+    
+    if (API_KEY === "YOUR_API_KEY_HERE") {
+        showError("Please add your GNews API key in script.js");
+    } else {
+        fetchNews();
+    }
 });
 
-function initializeApp() {
-    // Display current date in header
-    const dateElement = document.getElementById('currentDate');
-    const currentDate = new Date().toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+function setupEventListeners() {
+    document.getElementById('fetchBtn').addEventListener('click', fetchNews);
+    document.getElementById('btn-feed').addEventListener('click', () => showView('feed'));
+    document.getElementById('btn-saved').addEventListener('click', () => showView('saved'));
+    document.getElementById('clearBtn').addEventListener('click', clearAllSaved);
+    
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            fetchNews();
+        }
     });
-    dateElement.textContent = currentDate;
     
-    // Update saved articles count
-    updateSavedCount();
-    
-    // Initial fetch if API key is configured
-    if (API_KEY && API_KEY !== "YOUR_API_KEY_HERE") {
-        fetchNews(); 
-    } else {
-        showError("Configuration Error: Please add your GNews API Key in script.js (line 17)");
+    document.getElementById('categorySelect').addEventListener('change', fetchNews);
+}
+
+function loadSavedArticles() {
+    try {
+        const saved = localStorage.getItem('torime_saved');
+        if (saved) {
+            bookmarkedArticles = JSON.parse(saved);
+        }
+    } catch (error) {
+        console.log('Could not load saved articles:', error);
+        bookmarkedArticles = [];
     }
 }
 
-/**
- * Fetch news articles from GNews API
- */
-async function fetchNews() {
-    const query = document.getElementById('searchInput').value.trim();
-    const category = document.getElementById('categorySelect').value;
-    const container = document.getElementById('newsFeed');
-    const btn = document.getElementById('fetchBtn');
-    const errorDiv = document.getElementById('errorContainer');
-
-    // Reset UI state
-    errorDiv.classList.add('hidden');
-    container.style.opacity = '0.5';
-    btn.innerHTML = '<span class="loader"></span>';
-
+function saveToBrowser() {
     try {
-        // Build API URL
-        let url = buildApiUrl(query, category);
-
-        // Fetch data
-        const response = await fetch(url);
-        const data = await response.json();
-
-        // Handle API errors
-        if (response.status !== 200) {
-            throw new Error(data.errors || "Failed to fetch news. Check API Key or Quota.");
-        }
-
-        // Update state and render
-        articles = data.articles;
-        renderArticles(articles, 'newsFeed');
-
+        localStorage.setItem('torime_saved', JSON.stringify(bookmarkedArticles));
     } catch (error) {
-        console.error('Fetch Error:', error);
+        console.log('Could not save articles:', error);
+    }
+}
+
+async function fetchNews() {
+    const searchTerm = document.getElementById('searchInput').value.trim();
+    const category = document.getElementById('categorySelect').value;
+    const feedContainer = document.getElementById('newsFeed');
+    const fetchButton = document.getElementById('fetchBtn');
+    const errorBox = document.getElementById('errorContainer');
+    
+    errorBox.classList.remove('show');
+    feedContainer.classList.add('loading');
+    fetchButton.innerHTML = '<span class="loader"></span>';
+    
+    try {
+        const apiUrl = buildRequestUrl(searchTerm, category);
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.errors || 'Failed to load news. Check your API key.');
+        }
+        
+        currentArticles = data.articles || [];
+        displayArticles(currentArticles, 'newsFeed');
+        
+    } catch (error) {
+        console.error('Error fetching news:', error);
         showError(error.message);
     } finally {
-        // Restore UI state
-        container.style.opacity = '1';
-        btn.textContent = "FETCH WIRE";
+        feedContainer.classList.remove('loading');
+        fetchButton.textContent = 'Find Stories';
     }
 }
 
-/**
- * Build API URL based on search query and category
- * @param {string} query - Search query
- * @param {string} category - News category
- * @returns {string} Complete API URL
- */
-function buildApiUrl(query, category) {
-    let url = `${BASE_URL}?lang=en&apikey=${API_KEY}`;
+function buildRequestUrl(searchTerm, category) {
+    let url = `${API_ENDPOINTS.headlines}?lang=en&apikey=${API_KEY}`;
     
-    if (query && query !== "General") {
-        // Use search endpoint for specific queries
-        url = `${SEARCH_URL}?q=${encodeURIComponent(query)}&lang=en&apikey=${API_KEY}`;
+    if (searchTerm && searchTerm.toLowerCase() !== 'general') {
+        url = `${API_ENDPOINTS.search}?q=${encodeURIComponent(searchTerm)}&lang=en&apikey=${API_KEY}`;
     } else if (category) {
-        // Use category filter for top headlines
         url += `&topic=${category}`;
     }
     
     return url;
 }
 
-
-/**
- * Display error message to user
- * @param {string} msg - Error message to display
- */
-function showError(msg) {
-    const el = document.getElementById('errorContainer');
-    el.textContent = msg;
-    el.classList.remove('hidden');
+function showError(message) {
+    const errorBox = document.getElementById('errorContainer');
+    errorBox.textContent = message;
+    errorBox.classList.add('show');
 }
 
-/**
- * Render articles in specified container
- * @param {Array} list - Array of article objects
- * @param {string} containerId - Target container ID
- */
-function renderArticles(list, containerId) {
+function displayArticles(articles, containerId) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
-
-    // Handle empty results
-    if (!list || list.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-10 italic text-gray-500">
-                No headlines found. Try a different search term or category.
-            </div>
-        `;
+    
+    if (!articles || articles.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>No stories found. Try a different search.</p></div>';
         return;
     }
-
-    // Render each article
-    list.forEach((article) => {
-        const articleHtml = createArticleCard(article);
-        container.innerHTML += articleHtml;
+    
+    articles.forEach(article => {
+        const articleElement = createArticleElement(article);
+        container.appendChild(articleElement);
     });
 }
 
-/**
- * Create HTML for a single article card
- * @param {Object} article - Article data object
- * @returns {string} HTML string for article card
- */
-function createArticleCard(article) {
-    // Check if article is saved
-    const isSaved = savedArticles.some(a => a.url === article.url);
+function createArticleElement(article) {
+    const articleDiv = document.createElement('div');
+    articleDiv.className = 'article-card';
     
-    // Format date
-    const dateStr = new Date(article.publishedAt).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-    });
+    const isBookmarked = bookmarkedArticles.some(saved => saved.url === article.url);
+    const publishDate = formatDate(article.publishedAt);
     
-    // Create image HTML if available
-    const imgHtml = article.image 
-        ? `<div class="w-full md:w-1/3 h-48 bg-gray-100 border border-black overflow-hidden">
-            <img src="${article.image}" 
-                 class="w-full h-full object-cover grayscale hover:grayscale-0 transition duration-500" 
-                 alt="${article.title}"
-                 onerror="this.parentElement.style.display='none'">
-           </div>`
-        : '';
-
-    // Sanitize description
-    const description = article.description 
-        ? escapeHtml(article.description) 
-        : 'No description available.';
-
-    return `
-        <article class="article-card flex flex-col md:flex-row gap-6 group">
-            ${imgHtml}
-            <div class="flex-1 flex flex-col">
-                <div class="flex items-center gap-3 mb-2">
-                    <span class="tag">${escapeHtml(article.source.name)}</span>
-                    <span class="text-xs text-gray-500 font-sans-serif uppercase">${dateStr}</span>
+    articleDiv.innerHTML = `
+        <div class="article-layout">
+            ${article.image ? `
+                <div class="article-image">
+                    <img src="${article.image}" alt="${escapeText(article.title)}">
                 </div>
-                <h3 class="text-2xl font-bold leading-tight mb-2 hover:underline font-serif">
+            ` : ''}
+            
+            <div class="article-content">
+                <div class="article-meta">
+                    <span class="source-tag">${escapeText(article.source.name)}</span>
+                    <span class="article-date">${publishDate}</span>
+                </div>
+                
+                <h3 class="article-title">
                     <a href="${article.url}" target="_blank" rel="noopener noreferrer">
-                        ${escapeHtml(article.title)}
+                        ${escapeText(article.title)}
                     </a>
                 </h3>
-                <p class="text-gray-700 mb-4 text-sm flex-grow">${description}</p>
-                <div class="flex justify-between items-center mt-auto pt-2">
-                    <a href="${article.url}" 
-                       target="_blank" 
-                       rel="noopener noreferrer"
-                       class="underline font-bold text-sm hover:text-gray-600">
-                        Read Full Story &rarr;
+                
+                <p class="article-description">
+                    ${escapeText(article.description || 'No description available')}
+                </p>
+                
+                <div class="article-actions">
+                    <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="read-link">
+                        Read Full Story →
                     </a>
-                    <button onclick="toggleSave('${article.url}')" 
-                            class="text-xs font-bold uppercase border border-black px-4 py-1 transition-all ${isSaved ? 'bg-black text-white' : 'hover:bg-black hover:text-white'}"
-                            aria-label="${isSaved ? 'Remove from saved' : 'Save article'}">
-                        ${isSaved ? 'Saved ✓' : 'Save +'}
+                    <button class="save-btn ${isBookmarked ? 'saved' : ''}" data-url="${article.url}">
+                        ${isBookmarked ? 'Saved ✓' : 'Save +'}
                     </button>
                 </div>
             </div>
-        </article>
+        </div>
     `;
+    
+    const saveButton = articleDiv.querySelector('.save-btn');
+    saveButton.addEventListener('click', () => toggleBookmark(article.url));
+    
+    return articleDiv;
 }
 
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+}
 
-/**
- * Toggle save state for an article
- * @param {string} url - Unique article URL identifier
- */
-function toggleSave(url) {
-    const index = savedArticles.findIndex(a => a.url === url);
+function escapeText(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function toggleBookmark(articleUrl) {
+    const index = bookmarkedArticles.findIndex(article => article.url === articleUrl);
     
-    if (index !== -1) {
-        // Remove from saved
-        savedArticles.splice(index, 1);
+    if (index > -1) {
+        bookmarkedArticles.splice(index, 1);
     } else {
-        // Add to saved
-        const item = articles.find(a => a.url === url);
-        if (item) {
-            savedArticles.push(item);
+        const article = currentArticles.find(a => a.url === articleUrl);
+        if (article) {
+            bookmarkedArticles.push(article);
         }
     }
     
-    // Persist to localStorage
-    localStorage.setItem('newswire_saved', JSON.stringify(savedArticles));
-    updateSavedCount();
+    saveToBrowser();
+    updateBookmarkCounter();
     
-    // Refresh current view
-    if (!document.getElementById('view-saved').classList.contains('hidden')) {
-        renderArticles(savedArticles, 'savedFeed');
-        document.getElementById('emptySaved').classList.toggle('hidden', savedArticles.length > 0);
+    const currentView = document.getElementById('view-saved').classList.contains('hidden') ? 'feed' : 'saved';
+    
+    if (currentView === 'saved') {
+        displayArticles(bookmarkedArticles, 'savedFeed');
+        toggleEmptyState();
     } else {
-        renderArticles(articles, 'newsFeed');
+        displayArticles(currentArticles, 'newsFeed');
     }
 }
 
-function clearSaved() {
-    if (confirm("Clear all archived articles? This cannot be undone.")) {
-        savedArticles = [];
-        localStorage.setItem('newswire_saved', JSON.stringify([]));
-        updateSavedCount();
-        renderArticles([], 'savedFeed');
-        document.getElementById('emptySaved').classList.remove('hidden');
+function clearAllSaved() {
+    if (confirm('Remove all saved stories? This cannot be undone.')) {
+        bookmarkedArticles = [];
+        saveToBrowser();
+        updateBookmarkCounter();
+        displayArticles([], 'savedFeed');
+        toggleEmptyState();
     }
 }
 
-
-function updateSavedCount() {
-    document.getElementById('savedCount').textContent = savedArticles.length;
+function updateBookmarkCounter() {
+    document.getElementById('savedCount').textContent = bookmarkedArticles.length;
 }
 
-/**
- * Switch between feed and saved views
- * @param {string} view - View identifier ('feed' or 'saved')
- */
-function switchView(view) {
-    const feed = document.getElementById('view-feed');
-    const saved = document.getElementById('view-saved');
-    const btnFeed = document.getElementById('btn-feed');
-    const btnSaved = document.getElementById('btn-saved');
-    const emptySaved = document.getElementById('emptySaved');
-
-    if (view === 'feed') {
-        // Show feed view
-        feed.classList.remove('hidden');
-        saved.classList.add('hidden');
-        
-        // Update button styles
-        btnFeed.classList.remove('bg-white', 'text-black');
-        btnFeed.classList.add('bg-black', 'text-white');
-        btnSaved.classList.remove('bg-black', 'text-white');
-        btnSaved.classList.add('bg-white', 'text-black');
+function showView(viewName) {
+    const feedView = document.getElementById('view-feed');
+    const savedView = document.getElementById('view-saved');
+    const feedButton = document.getElementById('btn-feed');
+    const savedButton = document.getElementById('btn-saved');
+    
+    if (viewName === 'feed') {
+        feedView.classList.remove('hidden');
+        savedView.classList.add('hidden');
+        feedButton.classList.add('active');
+        savedButton.classList.remove('active');
     } else {
-        // Show saved view
-        feed.classList.add('hidden');
-        saved.classList.remove('hidden');
+        feedView.classList.add('hidden');
+        savedView.classList.remove('hidden');
+        feedButton.classList.remove('active');
+        savedButton.classList.add('active');
         
-        // Render saved articles
-        renderArticles(savedArticles, 'savedFeed');
-        emptySaved.classList.toggle('hidden', savedArticles.length > 0);
-        
-        // Update button styles
-        btnSaved.classList.remove('bg-white', 'text-black');
-        btnSaved.classList.add('bg-black', 'text-white');
-        btnFeed.classList.remove('bg-black', 'text-white');
-        btnFeed.classList.add('bg-white', 'text-black');
+        displayArticles(bookmarkedArticles, 'savedFeed');
+        toggleEmptyState();
     }
 }
 
-
-/**
- * Escape HTML to prevent XSS attacks
- * @param {string} text - Text to escape
- * @returns {string} Escaped text
- */
-function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
+function toggleEmptyState() {
+    const emptyMessage = document.getElementById('emptySaved');
+    if (bookmarkedArticles.length === 0) {
+        emptyMessage.classList.remove('hidden');
+    } else {
+        emptyMessage.classList.add('hidden');
+    }
 }
