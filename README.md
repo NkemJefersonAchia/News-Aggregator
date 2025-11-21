@@ -87,7 +87,7 @@ The application is deployed across multiple servers for reliability and performa
 - Web Server 1: 3.86.143.160
 - Web Server 2: 54.174.119.2
 - Load Balancer: 3.91.203.23
-- Domain: nkem.tech
+- Domain: www.nkem.tech
 
 ### Deploy to Web Servers
 
