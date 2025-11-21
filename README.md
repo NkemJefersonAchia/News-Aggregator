@@ -121,13 +121,12 @@ const API_KEY = "abc123def456ghi789";
 
 
 # Configure Nginx
-
 sudo nano /etc/nginx/sites-available/default
 ```
 
-### Add the following Nginx configuration:
+Add the following Nginx configuration:
 
-```
+```nginx
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
