@@ -1,6 +1,6 @@
 # Tori Me - News Aggregator
 
-###Link to Video: https://youtu.be/80YRYqbYIzs?si=m2A6W1Xp0JPI2at6
+### Link to Video: https://youtu.be/80YRYqbYIzs?si=m2A6W1Xp0JPI2at6
 
 A clean, minimalist news aggregation platform that brings you the latest headlines from around the world. Built with vanilla JavaScript and powered by the EventRegistry API.
 
