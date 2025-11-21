@@ -106,7 +106,7 @@ sudo chown -R ubuntu:ubuntu torime
 
 ### Configure Your API Key
 
-cd News-Aggregator
+cd torime
 Open `script.js` and locate line 1:
 sudo nano script.js
 ```javascript
@@ -171,7 +171,7 @@ sudo chown -R ubuntu:ubuntu torime
 
 ### Configure Your API Key
 
-cd News-Aggregator
+cd torime
 
 Open `script.js` and locate line 1:
 sudo nano script.js
