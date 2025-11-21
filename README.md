@@ -165,7 +165,7 @@ Repeat the same process on the second server:
 ssh ubuntu@54.174.119.2
 
 sudo mkdir -p /var/www/torime
-cd /var/www/torime
+cd /var/www
 sudo git clone https://github.com/NkemJefersonAchia/News-Aggregator.git torime
 sudo chown -R ubuntu:ubuntu torime
 
