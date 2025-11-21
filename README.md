@@ -110,7 +110,6 @@ sudo chown -R ubuntu:ubuntu torime
 cd News-Aggregator
 Open `script.js` and locate line 1:
 sudo nano script.js
-
 ```javascript
 const API_KEY = "YOUR_API_KEY_HERE";
 ```
@@ -187,14 +186,15 @@ const API_KEY = "abc123def456ghi789";
 ```
 
 sudo nano /etc/nginx/sites-available/default
-# Paste the same Nginx configuration
+### Paste the same Nginx configuration
 
+```bash
 sudo nginx -t
 sudo systemctl restart nginx
 exit
 ```
 
-### Load Balancer Configuration
+# Load Balancer Configuration
 
 ```bash
 # Connect to load balancer
